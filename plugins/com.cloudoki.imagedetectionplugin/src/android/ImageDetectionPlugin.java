@@ -176,7 +176,6 @@ public class ImageDetectionPlugin extends CordovaPlugin implements SurfaceHolder
     @Override
     public boolean execute(String action, JSONArray data,
                            CallbackContext callbackContext) throws JSONException {
-
         if (action.equals("greet")) {
             Log.i(TAG, "greet called");
             String name = data.getString(0);
@@ -783,8 +782,7 @@ public class ImageDetectionPlugin extends CordovaPlugin implements SurfaceHolder
 
                         if (result) {
                             Log.i("#### DETECTION ####", "Detected stuff");
-                            updateState(true, index);
-                            if (debug) {
+                            // if (debug) {
                                 Mat obj_corners = new Mat(4, 1, CvType.CV_32FC2);
                                 Mat scene_corners = new Mat(4, 1, CvType.CV_32FC2);
 
@@ -795,13 +793,15 @@ public class ImageDetectionPlugin extends CordovaPlugin implements SurfaceHolder
 
                                 Core.perspectiveTransform(obj_corners, scene_corners, H);
 
-                                Imgproc.line(img_matches, new Point(scene_corners.get(0, 0)), new Point(scene_corners.get(1, 0)), new Scalar(0, 255, 0), 4);
-                                Imgproc.line(img_matches, new Point(scene_corners.get(1, 0)), new Point(scene_corners.get(2, 0)), new Scalar(0, 255, 0), 4);
-                                Imgproc.line(img_matches, new Point(scene_corners.get(2, 0)), new Point(scene_corners.get(3, 0)), new Scalar(0, 255, 0), 4);
-                                Imgproc.line(img_matches, new Point(scene_corners.get(3, 0)), new Point(scene_corners.get(0, 0)), new Scalar(0, 255, 0), 4);
-                            }
+                                // Here we have the 4 corners of the detected image.
+                                // Imgproc.line(img_matches, new Point(scene_corners.get(0, 0)), new Point(scene_corners.get(1, 0)), new Scalar(0, 255, 0), 4);
+                                // Imgproc.line(img_matches, new Point(scene_corners.get(1, 0)), new Point(scene_corners.get(2, 0)), new Scalar(0, 255, 0), 4);
+                                // Imgproc.line(img_matches, new Point(scene_corners.get(2, 0)), new Point(scene_corners.get(3, 0)), new Scalar(0, 255, 0), 4);
+                                // Imgproc.line(img_matches, new Point(scene_corners.get(3, 0)), new Point(scene_corners.get(0, 0)), new Scalar(0, 255, 0), 4);
+                            // }
+                            updateState(true, index, scene_corners);
                         } else {
-                            updateState(false, index);
+                            updateState(false, index, null);
                         }
                         H.release();
                     }
@@ -864,8 +864,9 @@ public class ImageDetectionPlugin extends CordovaPlugin implements SurfaceHolder
         }
     }
 
-    private void updateState(boolean state, int _index) {
+    private void updateState(boolean state, int _index, Mat _scene_corners) {
         final int index = _index;
+        final Mat scene_corners = _scene_corners;
 
         int detection_limit = 6;
 
@@ -893,10 +894,18 @@ public class ImageDetectionPlugin extends CordovaPlugin implements SurfaceHolder
             }
         }
 
-        if (getState(_index) && called_failed_detection && !called_success_detection) {
+        if (getState(_index) /* && called_failed_detection && !called_success_detection */) {
             cordova.getThreadPool().execute(new Runnable() {
                 public void run() {
-                    PluginResult result = new PluginResult(PluginResult.Status.OK, "{\"message\":\"pattern detected\", \"index\":" + index + "}");
+                    if (cb == null) return;
+                    if (scene_corners == null) return;
+                    if (scene_corners.empty()) return;
+                    String corner0 = "[" + scene_corners.get(0, 0)[0] + "," + scene_corners.get(0, 0)[1] + "]";
+                    String corner1 = "[" + scene_corners.get(1, 0)[0] + "," + scene_corners.get(1, 0)[1] + "]";
+                    String corner2 = "[" + scene_corners.get(2, 0)[0] + "," + scene_corners.get(2, 0)[1] + "]";
+                    String corner3 = "[" + scene_corners.get(3, 0)[0] + "," + scene_corners.get(3, 0)[1] + "]";
+                    String corners = "[" + corner0 + "," + corner1 + "," + corner2 + "," + corner3 + "]";
+                    PluginResult result = new PluginResult(PluginResult.Status.OK, "{\"message\":\"pattern detected\", \"index\":" + index + ", \"corners\": " + corners + "}");
                     result.setKeepCallback(true);
                     cb.sendPluginResult(result);
                 }
@@ -911,7 +920,7 @@ public class ImageDetectionPlugin extends CordovaPlugin implements SurfaceHolder
         if (!getState(_index) && !called_failed_detection && called_success_detection && valid_index) {
             cordova.getThreadPool().execute(new Runnable() {
                 public void run() {
-                    PluginResult result = new PluginResult(PluginResult.Status.ERROR, "{\"message\":\"pattern not detected\"}");
+                    PluginResult result = new PluginResult(PluginResult.Status.ERROR, "{\"message\":\"pattern not detected\", \"index\":" + index + "}");
                     result.setKeepCallback(true);
                     cb.sendPluginResult(result);
                 }

@@ -27,17 +27,35 @@ var app = {
     // Bind any cordova events here. Common events are:
     // 'pause', 'resume', etc.
     onDeviceReady: function() {
-        this.receivedEvent('deviceready');
 
         var imgDetectionPlugin = window.plugins.ImageDetectionPlugin || new ImageDetectionPlugin();
 
         imgDetectionPlugin.startProcessing(true, function(success){console.log(success);}, function(error){console.log(error);});
 
         imgDetectionPlugin.isDetecting(function(success){
-          console.log(success);
+          // console.log(success);
           var resp = JSON.parse(success);
-          alert("Index detected: " + resp.index + ", Image detected: " + indexes[resp.index]);
-        }, function(error){console.log(error);});
+          // alert("Image detected: " + indexes[resp.index]);
+          // alert(success);
+          var color = ["red","green","blue","yellow","pink","cyan","lightgreen","violet","orange","black"];
+          document.getElementById('readmore' + resp.index).setAttribute('style', 
+            'width: 20px;' +
+            'height: 20px;' +
+            'background: ' + color[resp.index] + ';' +
+            'position: absolute;' +
+            'left: ' + Math.round(0.5 * resp.corners[0][0]) + 'px;' +
+            'top: ' + Math.round(0.5 * resp.corners[0][1]) + 'px;' +
+            'display: block;');
+        }, function(error){
+          try {
+            var resp = JSON.parse(error);
+            document.getElementById('readmore' + resp.index).setAttribute('style', 'display: none');
+            console.log(resp.message);
+          }
+          catch (e) {
+            console.log(error);
+          }
+        });
 
         function setAllPatterns(patterns) {
           imgDetectionPlugin.setPatterns(patterns, function(success){console.log(success);}, function(error){console.log(error);});
@@ -46,7 +64,6 @@ var app = {
         var loadAllImg = 0;
         var patternsHolder = [];
         var indexes = {};
-        var limit = 3;
 
         function ToDataURL (self) {
           var canvas = document.createElement('canvas');
@@ -60,45 +77,33 @@ var app = {
           indexes[loadAllImg] = self.src.substr(self.src.lastIndexOf("/") + 1);
           loadAllImg += 1;
           console.log("!!!", loadAllImg, indexes);
-          if(loadAllImg == limit){
+          if(loadAllImg == numTargets){
             console.log("patterns set", patternsHolder);
             setAllPatterns(patternsHolder);
           }
           canvas = null;
         }
 
-        var img = new Image();
-        img.crossOrigin = "Anonymous";
-        img.onload = function(){
-          ToDataURL(this)
-        };
-        img.src = "img/patterns/target1.jpg";
+        function addTarget(url) {
+          var img = new Image();
+          img.crossOrigin = "Anonymous";
+          img.onload = function(){
+            ToDataURL(this)
+          };
+          img.src = url;
+        }
 
-        var img = new Image();
-        img.crossOrigin = "Anonymous";
-        img.onload = function(){
-          ToDataURL(this)
-        };
-        img.src = "img/patterns/target2.jpg";
-
-        var img = new Image();
-        img.crossOrigin = "Anonymous";
-        img.onload = function(){
-          ToDataURL(this)
-        };
-        img.src = "img/patterns/target3.jpg";
-    },
-
-    // Update DOM on a Received Event
-    receivedEvent: function(id) {
-        var parentElement = document.getElementById(id);
-        var listeningElement = parentElement.querySelector('.listening');
-        var receivedElement = parentElement.querySelector('.received');
-
-        listeningElement.setAttribute('style', 'display:none;');
-        receivedElement.setAttribute('style', 'display:block;');
-
-        console.log('Received Event: ' + id);
+        var numTargets = 10;
+        addTarget("img/patterns/target1.jpg");
+        addTarget("img/patterns/target2.jpg");
+        addTarget("img/patterns/target3.jpg");
+        addTarget("img/patterns/target4.png");
+        addTarget("img/patterns/bag1.jpeg");
+        addTarget("img/patterns/bag2.jpeg");
+        addTarget("img/patterns/bag3.jpeg");
+        addTarget("img/patterns/bag4.jpeg");
+        addTarget("img/patterns/bag5.jpeg");
+        addTarget("img/patterns/ruban.png");
     }
 };
 
